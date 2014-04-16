@@ -5,3 +5,8 @@ echo "done installing../n"
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 dpkg -i *.deb
 apt-get -y install google-chrome-stable
+
+
+mkdir -p /mnt/share
+LINE='192.168.0.10:/share      /mnt/share    nfs     intr    0       0'
+grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab
