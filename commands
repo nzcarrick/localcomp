@@ -23,5 +23,7 @@ mkdir -p /mnt/share
 LINE='192.168.0.10:/share      /mnt/share    nfs     intr    0       0'
 grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab
 
+# remount all file systems
+mount -a
 
 apt-get autoremove
