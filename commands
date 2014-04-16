@@ -8,6 +8,7 @@ fi
 apt-get update
 apt-get -y upgrade
 
+
 # install packages from "packages" file
 cat packages | xargs sudo apt-get install -y
 echo "done installing../n"
@@ -21,3 +22,6 @@ apt-get -y install google-chrome-stable
 mkdir -p /mnt/share
 LINE='192.168.0.10:/share      /mnt/share    nfs     intr    0       0'
 grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab
+
+
+apt-get autoremove
