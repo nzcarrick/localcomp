@@ -19,7 +19,9 @@ dpkg -i *.deb
 apt-get -y install google-chrome-stable
 
 # create nfs mount for zotac
-mkdir -p /mnt/share
+if [ ! -d "/mnt/share" ]; then
+  mkdir -p /mnt/share
+fi  
 LINE='192.168.0.10:/share      /mnt/share    nfs     intr    0       0'
 grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab && mount -a
 
