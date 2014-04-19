@@ -14,9 +14,12 @@ cat packages | xargs sudo apt-get install -y
 echo "done installing../n"
 
 # install repo for chrome & install
-wget -N https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-dpkg -i *.deb
-apt-get -y install google-chrome-stable
+GCPROG='google-chrome'
+command -v "$GCPROG" >/dev/null 2>&1 || (
+wget -N https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && 
+dpkg -i *.deb &&
+apt-get -y install google-chrome-stable &&
+rm google-chrome-stable_current_amd64.deb )
 
 # create nfs mount for zotac
 if [ ! -d "/mnt/share" ]; then
