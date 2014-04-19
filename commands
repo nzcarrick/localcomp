@@ -22,7 +22,7 @@ apt-get -y install google-chrome-stable
 if [ ! -d "/mnt/share" ]; then
   mkdir -p /mnt/share
 fi  
-LINE='192.168.0.10:/share      /mnt/share    nfs     intr    0       0'
+LINE='192.168.0.10:/share      /mnt/share    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0'
 grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab && mount -a
 
-apt-get autoremove
+apt-get -y autoremove
