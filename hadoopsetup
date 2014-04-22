@@ -17,11 +17,11 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # install some required packages
-apt-get update
-apt-get install -y screen openssh-server nfs-common
+apt-get -qq update > /dev/null
+apt-get install -y -qq screen openssh-server nfs-common rsync 
 
 # purge open java
-apt-get -y purge openjdk-\* icedtea-\* icedtea6-\*
+apt-get -y purge openjdk-\* icedtea-\* icedtea6-\* > /dev/null
 
 
 ##setup directories
@@ -48,10 +48,15 @@ cd /mnt/share/hadoop/other
 tar vxzf ssh.gz -C /home/hduser
 
 # copy hadoop 
-tar vxzf /mnt/share/hadoop/hadoop/hadoop-2.2.0.tar.gz -C /usr/local
+if [ ! -d "/usr/local/hadoop" ]; then
+tar xzf /mnt/share/hadoop/hadoop/hadoop-2.2.0.tar.gz -C /usr/local
 cd /usr/local
-mv hadoop-2.2.0/. hadoop
+mv hadoop-2.2.0 hadoop
 chown -R hduser:hadoop hadoop
+echo "Copied hadoop"
+else
+echo "Hadoop folder already exists - delete /usr/local/hadoop to re-install"
+fi
 
 # copy java  if not setup already.
 JAVA_REQ_VER="1.7.0_55"
@@ -98,15 +103,19 @@ export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native
 export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
 #end of paste
 EOF
-echo "appended hadoop variables"
+echo "Updated .bashrc for hadoop variables"
 source /home/hduser/.bashrc
 chown hduser:hadoop /home/hduser/.bashrc
+else
+echo "Skipping .bashrc update"
 fi
 
 # configure hadoop
 cd /usr/local/hadoop/etc/hadoop
 if [ ! -f "updated" ]; then
 touch mapred-site.xml
+touch hdfs-site.xml
+touch yarn-site.xml
 mv hdfs-site.xml hdfs-site.xml.old
 mv mapred-site.xml mapred-site.xml.old
 mv yarn-site.xml yarn-site.xml.old
@@ -114,8 +123,9 @@ cp /mnt/share/hadoop/other/hdfs-site.xml .
 cp /mnt/share/hadoop/other/mapred-site.xml .
 cp /mnt/share/hadoop/other/yarn-site.xml .
 touch updated
+echo "Updated hdfs,yarn,mapred files"
 else
-echo "''updated'' file found - no changes made"
+echo "''updated'' file found - no changes made to hdfs,yarn,mapred files"
 fi
 yes | cp /mnt/share/hadoop/other/slaves .
 chown -R hduser:hadoop .
@@ -125,20 +135,29 @@ chown -R hduser:hadoop .
 # you may need to update the subnet mask to reflect your network structure.
 SUBNET=255.255.255.0
 HOSTFILE=hosts
+SLAVEFILE=slaves
 REMOTEHOSTDIR=/mnt/share/hadoop/other
-LOCALHOSTDIR=/home/cam/delsafe
+LOCALHOSTDIR=/etc
 HOSTNAME=`hostname`
 DOMAIN="tux.localdomain"
 IPADDRESS=`ifconfig | sed -n "/inet addr:.*${SUBNET}/{s/.*inet addr://; s/ .*//; p}"`
 HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME" 
 
+
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${HOSTFILE} ; then
-echo "$HOSTENTRY" >> ${REMOTEHOSTDIR}/${HOSTFILE}
-echo "added new entry for $HOSTNAME"
+echo ${HOSTENTRY} >> ${REMOTEHOSTDIR}/${HOSTFILE}
+echo "added new entry for ${HOSTNAME} into ${HOSTFILE}"
 fi
+
+if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${SLAVEFILE} ; then
+echo ${HOSTNAME} >> ${REMOTEHOSTDIR}/${SLAVEFILE}
+echo "added new entry for ${HOSTNAME} into ${SLAVEFILE}"
+fi
+
 
 # pull down and overwrite current host file.
 # then append "localhost" to the relevent entry
+mv ${LOCALHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}.old
 cp ${REMOTEHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}
 sed -i "s#^${HOSTENTRY}#${HOSTENTRY}  localhost#" ${LOCALHOSTDIR}/${HOSTFILE}
 
