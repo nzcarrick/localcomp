@@ -39,9 +39,10 @@ grep "$fstabmntstr" /etc/fstab >/dev/null  || echo $fstabmntstr >> /etc/fstab
 mount -a
 
 #setup hadoop user
+ARGPASS=$1
 addgroup hadoop
-pass=$(perl -e 'print crypt("dsX4411", "dsX4411");')
-useradd -d /home/hduser -m hduser -p "$pass" -G hadoop,sudo -s /bin/bash
+PASS=`perl -e "print crypt($ARGPASS, $ARGPASS);"`
+useradd -d /home/hduser -m hduser -p "$PASS" -G hadoop,sudo -s /bin/bash
 
 # setup ssh (yes this is bad)
 cd /mnt/share/hadoop/other
