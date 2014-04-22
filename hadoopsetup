@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# must be root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# install some required packages
+apt-get update
+apt-get install -y screen openssh-server nfs-common
+
+# purge open java
+apt-get -y purge openjdk-\* icedtea-\* icedtea6-\*
+
+
+##setup directories
+# create nfs mount for zotac
+if [ ! -d "/mnt/share" ]; then
+    mkdir -p /mnt/share
+fi
+if [ ! -d "/usr/local/java" ]; then
+    mkdir -p "/usr/local/java"
+fi
+
+# mount nfs
+fstabmntstr='192.168.0.10:/share      /mnt/share    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0'
+grep "$fstabmntstr" /etc/fstab >/dev/null  || echo $fstabmntstr >> /etc/fstab 
+mount -a
+
+#setup hadoop user
+addgroup hadoop
+pass=$(perl -e 'print crypt("dsX4411", "dsX4411");')
+useradd -d /home/hduser -m hduser -p "$pass" -G hadoop,sudo -s /bin/bash
+
+# setup ssh (yes this is bad)
+cd /mnt/share/hadoop/other
+tar vxzf ssh.gz -C /home/hduser
+
+# copy hadoop 
+tar vxzf /mnt/share/hadoop/hadoop/hadoop-2.2.0.tar.gz -C /usr/local
+cd /usr/local
+mv hadoop-2.2.0/. hadoop
+chown -R hduser:hadoop hadoop
+
+# copy java 
+cp -r  /mnt/share/hadoop/java/64/jdk1.7.0_55/ /usr/local/java/
+cd /usr/local/java
+# configure java
+update-alternatives --install "/usr/bin/java" "java" "/usr/local/java/jdk1.7.0_55/bin/java" 1
+update-alternatives --install "/usr/bin/javac" "javac" "/usr/local/java/jdk1.7.0_55/bin/javac" 1
+update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/local/java/jdk1.7.0_55/bin/javaws" 1
+update-alternatives --install "/usr/bin/jps" "jps" "/usr/local/java/jdk1.7.0_55/bin/jps" 1
+update-alternatives --set java /usr/local/java/jdk1.7.0_55/bin/java
+update-alternatives --set javac /usr/local/java/jdk1.7.0_55/bin/javac
+update-alternatives --set javaws /usr/local/java/jdk1.7.0_55/bin/javaws
+update-alternatives --set jps /usr/local/java/jdk1.7.0_55/bin/jps
+chmod a+x /usr/bin/java
+chmod a+x /usr/bin/javac
+chmod a+x /usr/bin/javaws
+chmod a+x /usr/bin/jps
+
+## setup environment variables
+profile_file=/home/hduser/.bashrc
+if ! grep -q '#Hadoop variables' "${profile_file}" ; then
+cat >> ${profile_file} << EOF
+#Hadoop variables
+export JAVA_HOME=/usr/local/java/jdk1.7.0_55/
+export HADOOP_INSTALL=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_INSTALL/bin
+export PATH=$PATH:$HADOOP_INSTALL/sbin
+export HADOOP_MAPRED_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_HOME=$HADOOP_INSTALL
+export HADOOP_HDFS_HOME=$HADOOP_INSTALL
+export YARN_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
+#end of paste
+EOF
+echo "appended hadoop variables"
+source /home/hduser/.bashrc
+chown hduser:hadoop /home/hduser/.bashrc
+fi
+
+# configure hadoop
+cd /usr/local/hadoop/etc/hadoop
+if [ ! -f "updated" ]; then
+touch mapred-site.xml
+mv hdfs-site.xml hdfs-site.xml.old
+mv mapred-site.xml mapred-site.xml.old
+mv yarn-site.xml yarn-site.xml.old
+cp /mnt/share/hadoop/other/hdfs-site.xml .
+cp /mnt/share/hadoop/other/mapred-site.xml .
+cp /mnt/share/hadoop/other/yarn-site.xml .
+touch updated
+else
+echo "''updated'' file found - no changes made"
+fi
+yes | cp /mnt/share/hadoop/other/slaves .
+chown -R hduser:hadoop .
