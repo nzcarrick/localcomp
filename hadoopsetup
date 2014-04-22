@@ -1,4 +1,14 @@
 #!/bin/bash
+# This is a nondestructive script which can be run many times without banging on the files adding the 
+# same info again and again.
+
+#Variables START HERE
+
+
+
+
+#Variables STOP HERE
+
 
 # must be root
 if [[ $EUID -ne 0 ]]; then
@@ -43,22 +53,33 @@ cd /usr/local
 mv hadoop-2.2.0/. hadoop
 chown -R hduser:hadoop hadoop
 
-# copy java 
-cp -r  /mnt/share/hadoop/java/64/jdk1.7.0_55/ /usr/local/java/
-cd /usr/local/java
-# configure java
-update-alternatives --install "/usr/bin/java" "java" "/usr/local/java/jdk1.7.0_55/bin/java" 1
-update-alternatives --install "/usr/bin/javac" "javac" "/usr/local/java/jdk1.7.0_55/bin/javac" 1
-update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/local/java/jdk1.7.0_55/bin/javaws" 1
-update-alternatives --install "/usr/bin/jps" "jps" "/usr/local/java/jdk1.7.0_55/bin/jps" 1
-update-alternatives --set java /usr/local/java/jdk1.7.0_55/bin/java
-update-alternatives --set javac /usr/local/java/jdk1.7.0_55/bin/javac
-update-alternatives --set javaws /usr/local/java/jdk1.7.0_55/bin/javaws
-update-alternatives --set jps /usr/local/java/jdk1.7.0_55/bin/jps
-chmod a+x /usr/bin/java
-chmod a+x /usr/bin/javac
-chmod a+x /usr/bin/javaws
-chmod a+x /usr/bin/jps
+# copy java  if not setup already.
+JAVA_REQ_VER="1.7.0_55"
+JAVA_VER=$(java -version 2>&1 | sed 's#java version "\(.*\)\(.*\)\.*"#\1\2#; 1q')
+echo "Local java is ${JAVA_VER}"
+echo "Required java is ${JAVA_REQ_VER}"
+if [ ${JAVA_VER} != ${JAVA_REQ_VER} ]; then
+  echo "Updateing java to ${JAVA_REQ_VER} ...."
+  sleep 5s
+  cp -r  /mnt/share/hadoop/java/64/jdk1.7.0_55/ /usr/local/java/
+  cd /usr/local/java
+  # configure java
+  update-alternatives --install "/usr/bin/java" "java" "/usr/local/java/jdk1.7.0_55/bin/java" 1
+  update-alternatives --install "/usr/bin/javac" "javac" "/usr/local/java/jdk1.7.0_55/bin/javac" 1
+  update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/local/java/jdk1.7.0_55/bin/javaws" 1
+  update-alternatives --install "/usr/bin/jps" "jps" "/usr/local/java/jdk1.7.0_55/bin/jps" 1
+  update-alternatives --set java /usr/local/java/jdk1.7.0_55/bin/java
+  update-alternatives --set javac /usr/local/java/jdk1.7.0_55/bin/javac
+  update-alternatives --set javaws /usr/local/java/jdk1.7.0_55/bin/javaws
+  update-alternatives --set jps /usr/local/java/jdk1.7.0_55/bin/jps
+  chmod a+x /usr/bin/java
+  chmod a+x /usr/bin/javac
+  chmod a+x /usr/bin/javaws
+  chmod a+x /usr/bin/jps
+else
+echo "no changes to java required"
+fi
+sleep 5s
 
 ## setup environment variables
 profile_file=/home/hduser/.bashrc
@@ -98,3 +119,30 @@ echo "''updated'' file found - no changes made"
 fi
 yes | cp /mnt/share/hadoop/other/slaves .
 chown -R hduser:hadoop .
+
+
+## update a central hosts file (not using DNS) All hadoop masters and slaves grab a common host file.
+# you may need to update the subnet mask to reflect your network structure.
+SUBNET=255.255.255.0
+HOSTFILE=hosts
+REMOTEHOSTDIR=/mnt/share/hadoop/other
+LOCALHOSTDIR=/home/cam/delsafe
+HOSTNAME=`hostname`
+DOMAIN="tux.localdomain"
+IPADDRESS=`ifconfig | sed -n "/inet addr:.*${SUBNET}/{s/.*inet addr://; s/ .*//; p}"`
+HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME" 
+
+if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${HOSTFILE} ; then
+echo "$HOSTENTRY" >> ${REMOTEHOSTDIR}/${HOSTFILE}
+echo "added new entry for $HOSTNAME"
+fi
+
+# pull down and overwrite current host file.
+# then append "localhost" to the relevent entry
+cp ${REMOTEHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}
+sed -i "s#^${HOSTENTRY}#${HOSTENTRY}  localhost#" ${LOCALHOSTDIR}/${HOSTFILE}
+
+## Update cron to pull central hosts file.
+# use 1 file for hosts and pull it often using cron. We also need to add localhost to the right entry.
+#CRON="1 2 3 4 5 /root/bin/backup.sh"
+#cat < (crontab -l) |grep -v "${CRON}" < (echo "${CRON}")
