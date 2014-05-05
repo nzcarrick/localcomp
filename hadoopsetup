@@ -1,12 +1,24 @@
 #!/bin/bash
 # This is a nondestructive script which can be run many times without banging on the files adding the 
-# same info again and again.
+# same info again and again. I is designed for 64 bit ubuntu
 
 #Variables START HERE
+#Hadoop User
+HADOOPUSER="hduser"
+HADOOPGRP="hadoop"
+# Password only used if not passed in as arg on commandline.
+HADOOPPASS="password"
 
 
+# Hadoop
+HADOOPVERSION=hadoop-2.4.0
 
+#Java 
+JAVA_REQ_VER="1.7.0_55"
 
+#NFS
+NFSLOCALMNT="/mnt/share"
+NFSSERVERMNT="192.168.0.10:/share"
 #Variables STOP HERE
 
 
@@ -26,23 +38,28 @@ apt-get -y purge openjdk-\* icedtea-\* icedtea6-\* > /dev/null
 
 ##setup directories
 # create nfs mount for zotac
-if [ ! -d "/mnt/share" ]; then
-    mkdir -p /mnt/share
+if [ ! -d ${NFSLOCALMNT} ]; then
+    mkdir -p ${NFSLOCALMNT}
 fi
 if [ ! -d "/usr/local/java" ]; then
     mkdir -p "/usr/local/java"
 fi
 
 # mount nfs
-fstabmntstr='192.168.0.10:/share      /mnt/share    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0'
+fstabmntstr='${NFSSERVERMNT}      ${NFSLOCALMNT}    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0'
 grep "$fstabmntstr" /etc/fstab >/dev/null  || echo $fstabmntstr >> /etc/fstab 
 mount -a
 
-#setup hadoop user
+#setup hadoop user, use 1st arg supplied on cli, but if empty, use the variable set at the top of script.
+if [ -z "$1" ] ; then
+ARGPASS=${HADOOPPASS}
+else
 ARGPASS=$1
-addgroup hadoop
+fi 
+
+addgroup ${HADOOPGRP}
 PASS=`perl -e "print crypt($ARGPASS, $ARGPASS);"`
-useradd -d /home/hduser -m hduser -p "$PASS" -G hadoop,sudo -s /bin/bash
+useradd -d /home/${HADOOPUSER} -m ${HADOOPUSER} -p "$PASS" -G ${HADOOPGRP},sudo -s /bin/bash
 
 # setup ssh (yes this is bad)
 cd /mnt/share/hadoop/other
@@ -50,17 +67,16 @@ tar vxzf ssh.gz -C /home/hduser
 
 # copy hadoop 
 if [ ! -d "/usr/local/hadoop" ]; then
-tar xzf /mnt/share/hadoop/hadoop/hadoop-2.2.0.tar.gz -C /usr/local
+tar xzf /mnt/share/hadoop/hadoop/${HADOOPVER}.tar.gz -C /usr/local
 cd /usr/local
-mv hadoop-2.2.0 hadoop
-chown -R hduser:hadoop hadoop
+mv ${HADOOPVER} hadoop
+chown -R ${HADOOPUSER}:${HADOOPGRP} hadoop
 echo "Copied hadoop"
 else
 echo "Hadoop folder already exists - delete /usr/local/hadoop to re-install"
 fi
 
 # copy java  if not setup already.
-JAVA_REQ_VER="1.7.0_55"
 JAVA_VER=$(java -version 2>&1 | sed 's#java version "\(.*\)\(.*\)\.*"#\1\2#; 1q')
 echo "Local java is ${JAVA_VER}"
 echo "Required java is ${JAVA_REQ_VER}"
@@ -88,7 +104,7 @@ fi
 sleep 5s
 
 ## setup environment variables
-profile_file=/home/hduser/.bashrc
+profile_file=/home/${HADOOPUSER}/.bashrc
 if ! grep -q '#Hadoop variables' "${profile_file}" ; then
 cat >> ${profile_file} << EOF
 #Hadoop variables
@@ -105,8 +121,8 @@ export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
 #end of paste
 EOF
 echo "Updated .bashrc for hadoop variables"
-source /home/hduser/.bashrc
-chown hduser:hadoop /home/hduser/.bashrc
+source /home/${HADOOPUSER}/.bashrc
+chown ${HADOOPUSER}:${HADOOPGRP} /home/${HADOOPUSER}/.bashrc
 else
 echo "Skipping .bashrc update"
 fi
@@ -129,7 +145,7 @@ else
 echo "''updated'' file found - no changes made to hdfs,yarn,mapred files"
 fi
 yes | cp /mnt/share/hadoop/other/slaves .
-chown -R hduser:hadoop .
+chown -R ${HADOOPUSER}:${HADOOPGRP} .
 
 
 ## update a central hosts file (not using DNS) All hadoop masters and slaves grab a common host file.
