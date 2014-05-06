@@ -130,12 +130,12 @@ if [ ${JAVA_VER} != ${JAVAREQVER} ]; then
   chmod a+x /usr/bin/javaws
   chmod a+x /usr/bin/jps
 else
-echo "[INFO]   No changes to java required" 1>&2
+echo "[INFO]  No changes to java required" 1>&2
 fi
 sleep 5s
 
 ## setup environment variables
-echo "[INFO]   ENVIRONMENT AND BASH" 1>&2
+echo "[INFO]  ENVIRONMENT AND BASH" 1>&2
 profile_file=/home/${HADOOPUSER}/.bashrc
 if ! grep -q '#Hadoop variables' "${profile_file}" ; then
 echo "[INFO]   Patching .bashrc" 1>&2
