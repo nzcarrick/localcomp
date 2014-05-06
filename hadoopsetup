@@ -1,6 +1,7 @@
 #!/bin/bash
 # This is a nondestructive script which can be run many times without banging on the files adding the 
 # same info again and again. I is designed for 64 bit ubuntu
+# Do not put a "/" at the end of paths!
 
 #Variables START HERE
 #Hadoop User
@@ -20,6 +21,18 @@ JAVA_REQ_VER="1.7.0_55"
 NFSLOCALMNT="/mnt/share"
 NFSSERVERMNT="192.168.0.10:/share"
 FSTABSTR="${NFSSERVERMNT}      ${NFSLOCALMNT}    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0"
+
+
+#Common HOSTS file
+SUBNET=255.255.255.0
+HOSTFILE=hosts
+SLAVEFILE=slaves
+REMOTEHOSTDIR=/mnt/share/hadoop/other
+LOCALHOSTDIR=/etc
+HOSTNAME=`hostname`
+DOMAIN="tux.localdomain"
+IPADDRESS=`ifconfig | sed -n "/inet addr:.*${SUBNET}/{s/.*inet addr://; s/ .*//; p}"`
+HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME" 
 #Variables STOP HERE
 
 
@@ -161,25 +174,14 @@ chown -R ${HADOOPUSER}:${HADOOPGRP} .
 ## update a central hosts file (not using DNS) All hadoop masters and slaves grab a common host file.
 # you may need to update the subnet mask to reflect your network structure.
 echo "[INFO]   PATCH HOSTS" 1>&2
-SUBNET=255.255.255.0
-HOSTFILE=hosts
-SLAVEFILE=slaves
-REMOTEHOSTDIR=/mnt/share/hadoop/other
-LOCALHOSTDIR=/etc
-HOSTNAME=`hostname`
-DOMAIN="tux.localdomain"
-IPADDRESS=`ifconfig | sed -n "/inet addr:.*${SUBNET}/{s/.*inet addr://; s/ .*//; p}"`
-HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME" 
-
-
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${HOSTFILE} ; then
-echo ${HOSTENTRY} >> ${REMOTEHOSTDIR}/${HOSTFILE}
-echo "[INFO]  Added new entry for ${HOSTNAME} into ${HOSTFILE}" 1>&2
+   echo ${HOSTENTRY} >> ${REMOTEHOSTDIR}/${HOSTFILE}
+   echo "[INFO]  Added new entry for ${HOSTNAME} into ${HOSTFILE}" 1>&2
 fi
 
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${SLAVEFILE} ; then
-echo ${HOSTNAME} >> ${REMOTEHOSTDIR}/${SLAVEFILE}
-echo "[INFO]  Added new entry for ${HOSTNAME} into ${SLAVEFILE}" 1>&2
+   echo ${HOSTNAME} >> ${REMOTEHOSTDIR}/${SLAVEFILE}
+   echo "[INFO]  Added new entry for ${HOSTNAME} into ${SLAVEFILE}" 1>&2
 fi
 
 
