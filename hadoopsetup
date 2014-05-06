@@ -59,7 +59,7 @@ if [ ! -d ${NFSLOCALMNT} ]; then
 else
    echo "[INFO]   ${NFSLOCALMNT} exits" 1>&2
 fi
-grep "${FSTABSTR}" /etc/fstab >/dev/null  || echo ${FSTABSTR} >> /etc/fstab 
+grep "${NFSSERVERMNT}" /etc/fstab >/dev/null  || echo ${FSTABSTR} >> /etc/fstab 
 mount -a
 
 #setup hadoop user, use 1st arg supplied on cli, but if empty, use the variable set at the top of script.
