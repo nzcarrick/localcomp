@@ -15,7 +15,7 @@ HADOOPPASS="password"
 HADOOPVER=hadoop-2.4.0
 
 #Java 
-JAVA_REQ_VER="1.7.0_55"
+JAVAREQVER="1.7.0_55"
 
 #NFS
 NFSLOCALMNT="/mnt/share"
@@ -77,12 +77,12 @@ PASS=`perl -e "print crypt($ARGPASS, $ARGPASS);"`
 useradd -d /home/${HADOOPUSER} -m ${HADOOPUSER} -p "$PASS" -G ${HADOOPGRP},sudo -s /bin/bash
 
 # setup ssh (yes this is bad)
-echo "[INFO]   SSH" 1>&2
+echo "[INFO]  SSH" 1>&2
 cd /mnt/share/hadoop/other
 tar vxzf ssh.gz -C /home/hduser
 
 # copy hadoop 
-echo "[INFO]   DOWNLOAD HADOOP ${HADOOPVER}" 1>&2
+echo "[INFO]  DOWNLOAD HADOOP ${HADOOPVER}" 1>&2
 if [ ! -d "/usr/local/hadoop" ]; then
 tar xzf /mnt/share/hadoop/hadoop/${HADOOPVER}.tar.gz -C /usr/local
 cd /usr/local
@@ -94,29 +94,37 @@ echo "[INFO]  Hadoop folder already exists - delete /usr/local/hadoop to re-inst
 fi
 
 # copy java  if not setup already.
-echo "[INFO]   JAVA" 1>&2
+echo "[INFO]  JAVA" 1>&2
 if [ ! -d "/usr/local/java" ]; then
    mkdir -p "/usr/local/java"
    echo "[INFO]   Created /usr/local/java" 1>&2
 fi
 
-JAVA_VER=$(java -version 2>&1 | sed 's#java version "\(.*\)\(.*\)\.*"#\1\2#; 1q')
-echo "[INFO]  Local java is ${JAVA_VER}"
+
+command -v java &> /dev/null
+if [ $? -eq 1 ]; then
+    JAVA_VER=0.0.0
+    echo >&2 "[INFO]  Java not found."
+else
+   JAVA_VER=$(java -version 2>&1 | sed 's#java version "\(.*\)\(.*\)\.*"#\1\2#; 1q')
+   echo "[INFO]  Installed java is ${JAVA_VER}"
+fi
+
 echo "[INFO]  Required java is ${JAVA_REQ_VER}"
-if [ ${JAVA_VER} != ${JAVA_REQ_VER} ]; then
+if [ ${JAVA_VER} != ${JAVAREQVER} ]; then
   echo "[INFO]  Updateing java to ${JAVA_REQ_VER}"
   sleep 5s
-  cp -r  /mnt/share/hadoop/java/64/jdk1.7.0_55/ /usr/local/java/
+  cp -r  /mnt/share/hadoop/java/64/jdk${JAVAREQVER}/ /usr/local/java/
   cd /usr/local/java
   # configure java
-  update-alternatives --install "/usr/bin/java" "java" "/usr/local/java/jdk1.7.0_55/bin/java" 1
-  update-alternatives --install "/usr/bin/javac" "javac" "/usr/local/java/jdk1.7.0_55/bin/javac" 1
-  update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/local/java/jdk1.7.0_55/bin/javaws" 1
-  update-alternatives --install "/usr/bin/jps" "jps" "/usr/local/java/jdk1.7.0_55/bin/jps" 1
-  update-alternatives --set java /usr/local/java/jdk1.7.0_55/bin/java
-  update-alternatives --set javac /usr/local/java/jdk1.7.0_55/bin/javac
-  update-alternatives --set javaws /usr/local/java/jdk1.7.0_55/bin/javaws
-  update-alternatives --set jps /usr/local/java/jdk1.7.0_55/bin/jps
+  update-alternatives --install "/usr/bin/java" "java" "/usr/local/java/jdk${JAVAREQVER}/bin/java" 1
+  update-alternatives --install "/usr/bin/javac" "javac" "/usr/local/java/jdk${JAVAREQVER}/bin/javac" 1
+  update-alternatives --install "/usr/bin/javaws" "javaws" "/usr/local/java/jdk${JAVAREQVER}/bin/javaws" 1
+  update-alternatives --install "/usr/bin/jps" "jps" "/usr/local/java/jdk${JAVAREQVER}/bin/jps" 1
+  update-alternatives --set java /usr/local/java/jdk${JAVAREQVER}/bin/java
+  update-alternatives --set javac /usr/local/java/jdk${JAVAREQVER}/bin/javac
+  update-alternatives --set javaws /usr/local/java/jdk${JAVAREQVER}/bin/javaws
+  update-alternatives --set jps /usr/local/java/jdk${JAVAREQVER}/bin/jps
   chmod a+x /usr/bin/java
   chmod a+x /usr/bin/javac
   chmod a+x /usr/bin/javaws
@@ -133,7 +141,7 @@ if ! grep -q '#Hadoop variables' "${profile_file}" ; then
 echo "[INFO]   Patching .bashrc" 1>&2
 cat >> ${profile_file} << EOF
 #Hadoop variables
-export JAVA_HOME=/usr/local/java/jdk1.7.0_55/
+export JAVA_HOME=/usr/local/java/jdk${JAVAREQVER}/
 export HADOOP_INSTALL=/usr/local/hadoop
 export PATH=$PATH:$HADOOP_INSTALL/bin
 export PATH=$PATH:$HADOOP_INSTALL/sbin
