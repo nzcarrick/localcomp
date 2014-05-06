@@ -2,6 +2,8 @@
 # This is a nondestructive script which can be run many times without banging on the files adding the 
 # same info again and again. I is designed for 64 bit ubuntu
 # Do not put a "/" at the end of paths!
+# If using dhcp and the central hosts file, you should set really, really really long lease times so the IP address doesn't 
+# get allocated to another computer. (otherwise setup DNS)
 
 #Variables START HERE
 #Hadoop User
@@ -199,7 +201,7 @@ fi
 # then append "localhost" to the relevent entry
 mv ${LOCALHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}.old
 cp ${REMOTEHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}
-sed -i "s#^${HOSTENTRY}#${HOSTENTRY}  localhost#g" ${LOCALHOSTDIR}/${HOSTFILE}
+sed -i "/^${HOSTENTRY}/ s/$/ localhost/" ${LOCALHOSTDIR}/${HOSTFILE}
 
 ## Update cron to pull central hosts file.
 # use 1 file for hosts and pull it often using cron. We also need to add localhost to the right entry.
