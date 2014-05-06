@@ -19,6 +19,7 @@ JAVA_REQ_VER="1.7.0_55"
 #NFS
 NFSLOCALMNT="/mnt/share"
 NFSSERVERMNT="192.168.0.10:/share"
+FSTABSTR="${NFSSERVERMNT}      ${NFSLOCALMNT}    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0"
 #Variables STOP HERE
 
 
@@ -46,8 +47,8 @@ if [ ! -d "/usr/local/java" ]; then
 fi
 
 # mount nfs
-fstabmntstr='${NFSSERVERMNT}      ${NFSLOCALMNT}    nfs async,nfsvers=3,actimeo=0,tcp,rsize=32768,wsize=32768    0       0'
-grep "$fstabmntstr" /etc/fstab >/dev/null  || echo $fstabmntstr >> /etc/fstab 
+
+grep "${FSTABSTR}" /etc/fstab >/dev/null  || echo ${FSTABSTR} >> /etc/fstab 
 mount -a
 
 #setup hadoop user, use 1st arg supplied on cli, but if empty, use the variable set at the top of script.
