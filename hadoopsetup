@@ -32,7 +32,7 @@ LOCALHOSTDIR=/etc
 HOSTNAME=`hostname`
 DOMAIN="tux.localdomain"
 IPADDRESS=`ifconfig | sed -n "/inet addr:.*${SUBNET}/{s/.*inet addr://; s/ .*//; p}"`
-HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME" 
+HOSTENTRY="$IPADDRESS    $HOSTNAME.$DOMAIN    $HOSTNAME" 
 #Variables STOP HERE
 
 
