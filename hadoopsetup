@@ -37,25 +37,24 @@ apt-get install -y -qq screen openssh-server nfs-common rsync
 apt-get -y purge openjdk-\* icedtea-\* icedtea6-\* > /dev/null
 
 
-##setup directories
+# mount nfs
+echo "[INFO]   NFS" 1>&2
 # create nfs mount for zotac
 if [ ! -d ${NFSLOCALMNT} ]; then
-    mkdir -p ${NFSLOCALMNT}
+   mkdir -p ${NFSLOCALMNT}
+   echo "[INFO]   Created ${NFSLOCALMNT}" 1>&2
 fi
-if [ ! -d "/usr/local/java" ]; then
-    mkdir -p "/usr/local/java"
-fi
-
-# mount nfs
-
 grep "${FSTABSTR}" /etc/fstab >/dev/null  || echo ${FSTABSTR} >> /etc/fstab 
 mount -a
 
 #setup hadoop user, use 1st arg supplied on cli, but if empty, use the variable set at the top of script.
+echo "[INFO]   HADOOP USER AND GROUP" 1>&2
 if [ -z "$1" ] ; then
-ARGPASS=${HADOOPPASS}
+   ARGPASS=${HADOOPPASS}
+   echo "[INFO]   Using Pass from script" 1>&2
 else
-ARGPASS=$1
+   ARGPASS=$1
+   echo "[INFO]   Using Pass from argument passed to script" 1>&2
 fi 
 
 addgroup ${HADOOPGRP}
@@ -63,26 +62,34 @@ PASS=`perl -e "print crypt($ARGPASS, $ARGPASS);"`
 useradd -d /home/${HADOOPUSER} -m ${HADOOPUSER} -p "$PASS" -G ${HADOOPGRP},sudo -s /bin/bash
 
 # setup ssh (yes this is bad)
+echo "[INFO]   SSH" 1>&2
 cd /mnt/share/hadoop/other
 tar vxzf ssh.gz -C /home/hduser
 
 # copy hadoop 
+echo "[INFO]   DOWNLOAD HADOOP" 1>&2
 if [ ! -d "/usr/local/hadoop" ]; then
 tar xzf /mnt/share/hadoop/hadoop/${HADOOPVER}.tar.gz -C /usr/local
 cd /usr/local
 mv ${HADOOPVER} hadoop
 chown -R ${HADOOPUSER}:${HADOOPGRP} hadoop
-echo "Copied hadoop"
+echo "[INFO]  Copied hadoop" 1>&2
 else
-echo "Hadoop folder already exists - delete /usr/local/hadoop to re-install"
+echo "[INFO]  Hadoop folder already exists - delete /usr/local/hadoop to re-install" 1>&2
 fi
 
 # copy java  if not setup already.
+echo "[INFO]   JAVA" 1>&2
+if [ ! -d "/usr/local/java" ]; then
+   mkdir -p "/usr/local/java"
+   echo "[INFO]   Created /usr/local/java" 1>&2
+fi
+
 JAVA_VER=$(java -version 2>&1 | sed 's#java version "\(.*\)\(.*\)\.*"#\1\2#; 1q')
-echo "Local java is ${JAVA_VER}"
-echo "Required java is ${JAVA_REQ_VER}"
+echo "[INFO]  Local java is ${JAVA_VER}"
+echo "[INFO]  Required java is ${JAVA_REQ_VER}"
 if [ ${JAVA_VER} != ${JAVA_REQ_VER} ]; then
-  echo "Updateing java to ${JAVA_REQ_VER} ...."
+  echo "[INFO]  Updateing java to ${JAVA_REQ_VER}"
   sleep 5s
   cp -r  /mnt/share/hadoop/java/64/jdk1.7.0_55/ /usr/local/java/
   cd /usr/local/java
@@ -100,13 +107,15 @@ if [ ${JAVA_VER} != ${JAVA_REQ_VER} ]; then
   chmod a+x /usr/bin/javaws
   chmod a+x /usr/bin/jps
 else
-echo "no changes to java required"
+echo "[INFO]   No changes to java required" 1>&2
 fi
 sleep 5s
 
 ## setup environment variables
+echo "[INFO]   ENVIRONMENT AND BASH" 1>&2
 profile_file=/home/${HADOOPUSER}/.bashrc
 if ! grep -q '#Hadoop variables' "${profile_file}" ; then
+echo "[INFO]   Patching .bashrc" 1>&2
 cat >> ${profile_file} << EOF
 #Hadoop variables
 export JAVA_HOME=/usr/local/java/jdk1.7.0_55/
@@ -121,11 +130,11 @@ export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native
 export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
 #end of paste
 EOF
-echo "Updated .bashrc for hadoop variables"
+echo "[INFO] Updated .bashrc for hadoop variables" 1>&2
 source /home/${HADOOPUSER}/.bashrc
 chown ${HADOOPUSER}:${HADOOPGRP} /home/${HADOOPUSER}/.bashrc
 else
-echo "Skipping .bashrc update"
+echo "[INFO]  Skipping .bashrc update" 1>&2
 fi
 
 # configure hadoop
@@ -141,9 +150,9 @@ cp /mnt/share/hadoop/other/hdfs-site.xml .
 cp /mnt/share/hadoop/other/mapred-site.xml .
 cp /mnt/share/hadoop/other/yarn-site.xml .
 touch updated
-echo "Updated hdfs,yarn,mapred files"
+echo "[INFO]  Updated hdfs,yarn,mapred files"
 else
-echo "''updated'' file found - no changes made to hdfs,yarn,mapred files"
+echo "[INFO]  ''updated'' file found - no changes made to hdfs,yarn,mapred files"
 fi
 yes | cp /mnt/share/hadoop/other/slaves .
 chown -R ${HADOOPUSER}:${HADOOPGRP} .
@@ -151,6 +160,7 @@ chown -R ${HADOOPUSER}:${HADOOPGRP} .
 
 ## update a central hosts file (not using DNS) All hadoop masters and slaves grab a common host file.
 # you may need to update the subnet mask to reflect your network structure.
+echo "[INFO]   PATCH HOSTS" 1>&2
 SUBNET=255.255.255.0
 HOSTFILE=hosts
 SLAVEFILE=slaves
@@ -164,12 +174,12 @@ HOSTENTRY="$IPADDRESS   $HOSTNAME.$DOMAIN   $HOSTNAME"
 
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${HOSTFILE} ; then
 echo ${HOSTENTRY} >> ${REMOTEHOSTDIR}/${HOSTFILE}
-echo "added new entry for ${HOSTNAME} into ${HOSTFILE}"
+echo "[INFO]  Added new entry for ${HOSTNAME} into ${HOSTFILE}" 1>&2
 fi
 
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${SLAVEFILE} ; then
 echo ${HOSTNAME} >> ${REMOTEHOSTDIR}/${SLAVEFILE}
-echo "added new entry for ${HOSTNAME} into ${SLAVEFILE}"
+echo "[INFO]  Added new entry for ${HOSTNAME} into ${SLAVEFILE}" 1>&2
 fi
 
 
