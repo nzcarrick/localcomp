@@ -183,7 +183,7 @@ chown -R ${HADOOPUSER}:${HADOOPGRP} .
 
 ## update a central hosts file (not using DNS) All hadoop masters and slaves grab a common host file.
 # you may need to update the subnet mask to reflect your network structure.
-echo "[INFO]   PATCH HOSTS" 1>&2
+echo "[INFO]  PATCH HOSTS" 1>&2
 if ! grep -q ${HOSTNAME} ${REMOTEHOSTDIR}/${HOSTFILE} ; then
    echo ${HOSTENTRY} >> ${REMOTEHOSTDIR}/${HOSTFILE}
    echo "[INFO]  Added new entry for ${HOSTNAME} into ${HOSTFILE}" 1>&2
