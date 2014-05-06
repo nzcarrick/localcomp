@@ -199,7 +199,7 @@ fi
 # then append "localhost" to the relevent entry
 mv ${LOCALHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}.old
 cp ${REMOTEHOSTDIR}/${HOSTFILE} ${LOCALHOSTDIR}/${HOSTFILE}
-sed -i "s#^${HOSTENTRY}[^ ]*#${HOSTENTRY}  localhost#" ${LOCALHOSTDIR}/${HOSTFILE}
+sed -i "s#^${HOSTENTRY}#${HOSTENTRY}  localhost#g" ${LOCALHOSTDIR}/${HOSTFILE}
 
 ## Update cron to pull central hosts file.
 # use 1 file for hosts and pull it often using cron. We also need to add localhost to the right entry.
