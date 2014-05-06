@@ -12,7 +12,7 @@ HADOOPPASS="password"
 
 
 # Hadoop
-HADOOPVERSION=hadoop-2.4.0
+HADOOPVER=hadoop-2.4.0
 
 #Java 
 JAVA_REQ_VER="1.7.0_55"
@@ -56,6 +56,8 @@ echo "[INFO]   NFS" 1>&2
 if [ ! -d ${NFSLOCALMNT} ]; then
    mkdir -p ${NFSLOCALMNT}
    echo "[INFO]   Created ${NFSLOCALMNT}" 1>&2
+else
+   echo "[INFO]   ${NFSLOCALMNT} exits" 1>&2
 fi
 grep "${FSTABSTR}" /etc/fstab >/dev/null  || echo ${FSTABSTR} >> /etc/fstab 
 mount -a
@@ -80,7 +82,7 @@ cd /mnt/share/hadoop/other
 tar vxzf ssh.gz -C /home/hduser
 
 # copy hadoop 
-echo "[INFO]   DOWNLOAD HADOOP" 1>&2
+echo "[INFO]   DOWNLOAD HADOOP ${HADOOPVER}" 1>&2
 if [ ! -d "/usr/local/hadoop" ]; then
 tar xzf /mnt/share/hadoop/hadoop/${HADOOPVER}.tar.gz -C /usr/local
 cd /usr/local
